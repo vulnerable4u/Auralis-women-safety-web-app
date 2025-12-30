@@ -1,0 +1,24 @@
+{
+  "emergency_services": {
+    "police": "100",
+    "ambulance": "102",
+    "fire": "101",
+    "women_helpline": "1091"
+  },
+  "sos_settings": {
+    "auto_call": false,
+    "auto_sms": true,
+    "location_sharing": true
+  },
+  "threat_thresholds": {
+    "safe": 0.2,
+    "low": 0.4,
+    "medium": 0.6,
+    "high": 0.8,
+    "critical": 1.0
+  }
+}
+
+
+
+

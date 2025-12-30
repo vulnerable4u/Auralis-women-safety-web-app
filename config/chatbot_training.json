@@ -1,0 +1,81 @@
+{
+  "intents": {
+    "greeting": {
+      "patterns": ["hello", "hi", "hey", "good morning", "good evening", "greetings"],
+      "responses": [
+        "👋 Hello! I'm your Personal Safety Assistant. I can help you find safe places, send alerts, or provide safety tips. How can I help?",
+        "Hi there! I'm here to ensure your safety. Do you need to find a safe zone or contact someone?",
+        "Hello! I'm ready to assist. You can say 'Help', 'Safe Places', or 'SOS' at any time."
+      ]
+    },
+    "nearest_safe_place": {
+      "patterns": ["nearest", "closest", "nearby", "safe place", "police station", "hospital", "safe zone", "where is", "find me"],
+      "responses": [
+        "I'll help you find the nearest safe place. Let me check your location...",
+        "Finding the closest safe place to you right now...",
+        "I can help you locate the nearest safe place. Please share your location."
+      ]
+    },
+    "emergency": {
+      "patterns": ["emergency", "danger", "help", "sos", "urgent", "threat", "scared", "afraid", "fear"],
+      "responses": [
+        "🔴 If you are in immediate danger, press the SOS button NOW! I can also alert your contacts automatically.",
+        "⚠️ This sounds urgent. Please activate SOS immediately. I am ready to notify your emergency contacts.",
+        "Your safety is my top priority. Activate SOS now if you feel threatened, or let me guide you to the nearest police station."
+      ]
+    },
+    "safety_tips": {
+      "patterns": ["safety tips", "how to stay safe", "precautions", "advice", "recommendations", "what should i do"],
+      "responses": [
+        "Here are some safety tips: 1) Stay aware of your surroundings, 2) Share your location with trusted contacts, 3) Keep emergency contacts accessible, 4) Trust your instincts, 5) Avoid isolated areas at night.",
+        "Safety recommendations: Always stay in well-lit areas, keep your phone charged, share your live location with friends, and don't hesitate to call for help if you feel unsafe.",
+        "Key safety tips: Be aware of your environment, walk confidently, keep emergency numbers ready, use well-traveled routes, and trust your gut feelings."
+      ]
+    },
+    "threat_level": {
+      "patterns": ["threat level", "current status", "how safe", "risk", "danger level", "what's my status"],
+      "responses": [
+        "I can see your current threat level. Check the status chip at the top of the screen for real-time updates.",
+        "Your threat level is monitored continuously. Look at the threat monitor panel for detailed information.",
+        "The threat assessment is running. Check the dashboard for your current safety status and recommendations."
+      ]
+    },
+    "contact_emergency": {
+      "patterns": ["call police", "contact emergency", "emergency number", "911", "100", "helpline"],
+      "responses": [
+        "📞 Emergency Numbers: Police (100), Women Helpline (1091). You can also use the SOS button to alert your personal contacts instantly.",
+        "For immediate help, call Police at 100 or the Women Helpline at 1091. The SOS button on your screen will also send your location to your family.",
+        "Emergency services are available. Police: 100, Ambulance: 102. Use the SOS button to notify your emergency contacts immediately."
+      ]
+    },
+    "location_sharing": {
+      "patterns": ["share location", "track me", "where am i", "my location", "gps"],
+      "responses": [
+        "Your location is being used to find nearby safe places. The map shows your current location and nearby safe zones.",
+        "Location sharing helps me find the nearest safe places. Your location is displayed on the map with nearby safety resources.",
+        "I use your location to provide accurate safety information. The map shows your position and nearby safe places within 5 km."
+      ]
+    },
+    "goodbye": {
+      "patterns": ["bye", "goodbye", "thanks", "thank you", "see you", "later"],
+      "responses": [
+        "Stay safe! 👋 Remember, I'm always here if you need help. Don't hesitate to use SOS in emergencies.",
+        "Take care! Your safety is important. Keep your phone charged and stay aware of your surroundings.",
+        "Goodbye! Stay alert and safe. I'm running in the background if you need me."
+      ]
+    },
+    "default": {
+      "patterns": [],
+      "responses": [
+        "I'm listening. You can ask me to 'Find Safe Places', 'Send Alert', or ask for 'Safety Tips'.",
+        "I can help you stay safe. Try asking: 'Where is the nearest police station?' or 'What should I do if I feel unsafe?'",
+        "I am your Safety Assistant. You can ask me about safe places, emergency contacts, or check your threat status."
+      ]
+    }
+  },
+  "context_keywords": {
+    "location_needed": ["nearest", "closest", "nearby", "find", "where"],
+    "emergency_keywords": ["emergency", "danger", "help", "urgent", "sos", "threat"],
+    "safety_keywords": ["safe", "safety", "tips", "advice", "recommendations", "precautions"]
+  }
+}

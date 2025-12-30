@@ -1,0 +1,14 @@
+{
+  "search_radius_km": 5,
+  "place_types": [
+    "police_station",
+    "hospital",
+    "safe_zone",
+    "community_center",
+    "women_shelter"
+  ],
+  "api_settings": {
+    "provider": "osm",
+    "fallback_enabled": true
+  }
+}
