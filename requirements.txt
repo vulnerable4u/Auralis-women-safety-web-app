@@ -22,5 +22,4 @@ httpx[http2]>=0.26.0,<0.29.0
 
 # Utilities
 markupsafe==3.0.2
-structlog==24.4.0
 

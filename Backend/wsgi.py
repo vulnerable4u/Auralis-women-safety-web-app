@@ -27,54 +27,34 @@ import json
 import logging
 from datetime import datetime, timezone
 from uuid import uuid4
-import structlog
 
 # =========================================================
-# STRUCTURED JSON LOGGING CONFIGURATION
+# STANDARD LOGGING CONFIGURATION
 # =========================================================
 
-def setup_structured_logging():
-    """Configure structlog for production JSON logs"""
+def setup_logging():
+    """Configure standard Python logging for production"""
     
-    # Pre-process log entries to add standard fields
-    def add_timestamp(logger, method_name, event_dict):
-        event_dict["timestamp"] = datetime.now(timezone.utc).isoformat()
-        return event_dict
+    # Create logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
     
-    def add_request_id(logger, method_name, event_dict):
-        if "request_id" not in event_dict:
-            event_dict["request_id"] = "N/A"
-        return event_dict
-    
-    structlog.configure(
-        processors=[
-            structlog.stdlib.add_log_level,
-            add_timestamp,
-            add_request_id,
-            structlog.stdlib.filter_by_level,
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer()
-        ],
-        context_class=dict,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        wrapper_class=structlog.stdlib.BoundLogger,
-        cache_logger_on_first_use=True
-    )
-    
-    # Configure Python stdlib logging
+    # Create console handler
     handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(message)s"))
+    handler.setLevel(logging.INFO)
     
-    root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
-    root_logger.setLevel(logging.INFO)
+    # Create formatter with timestamp
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    handler.setFormatter(formatter)
+    
+    # Add handler to logger
+    logger.addHandler(handler)
+    
+    return logger
 
-setup_structured_logging()
-
-logger = structlog.get_logger(__name__)
+logger = setup_logging()
 
 # =========================================================
 # FLASK APPLICATION FACTORY
@@ -83,7 +63,6 @@ logger = structlog.get_logger(__name__)
 def create_app():
     """Application factory with production settings"""
     
-    # Import Flask after logging is configured
     from flask import Flask, g, request
     from dotenv import load_dotenv
     
@@ -125,12 +104,8 @@ def create_app():
         if hasattr(g, "start_time"):
             duration = (datetime.now(timezone.utc) - g.start_time).total_seconds()
             logger.info(
-                "request_completed",
-                method=request.method,
-                path=request.path,
-                status_code=response.status_code,
-                duration_ms=round(duration * 1000, 2),
-                request_id=g.request_id
+                f"Request completed: {request.method} {request.path} - "
+                f"Status: {response.status_code} - Duration: {round(duration * 1000, 2)}ms"
             )
         
         return response
@@ -164,10 +139,10 @@ def create_app():
     
     @app.errorhandler(500)
     def internal_error(error):
-        logger.error("internal_error", request_id=g.get("request_id"), error=str(error))
+        logger.error(f"Internal server error: {error}")
         return {"error": "Internal server error", "request_id": g.get("request_id")}, 500
     
-    logger.info("flask_app_created", production=True)
+    logger.info("Flask application created successfully")
     
     return app
 
