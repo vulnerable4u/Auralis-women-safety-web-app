@@ -61,13 +61,9 @@
                 </div>
                 <a href="/logout" class="btn btn-secondary">Logout</a>
             {% else %}
-<<<<<<< HEAD:templates/index.html
-                <a href="/login" class="btn btn-primary">Login</a>
-=======
                 <a href="/user-login" class="btn btn-secondary">Login</a>
->>>>>>> 4fe5a61 (deployed):Frontend/templates/index.html
             {% endif %}
-            <a href="/admin-login" class="btn btn-admin">Admin</a>
+            <a href="/login" class="btn btn-admin">Admin</a>
             <a href="/about" class="btn btn-secondary">About</a>
             <button id="theme-toggle" class="btn btn-secondary" title="Toggle Dark Mode">
                 <i class="fas fa-moon" id="theme-icon"></i>
@@ -194,3 +190,4 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
+

@@ -468,6 +468,13 @@ def logout():
     rotate_session()
     return redirect(url_for("index"))
 
+# ---------------- ABOUT ----------------
+
+@app.route("/about")
+def about():
+    """About page - accessible to all users"""
+    return render_template("about.html")
+
 # ---------------- ONBOARDING ----------------
 
 @app.route("/onboarding")
@@ -663,8 +670,11 @@ def admin_delete_user():
         if username_to_delete == session.get("username"):
             return jsonify({"error": "Cannot delete your own admin account"}), 400
         
-        # Get user from database
+        # Get user from database - try email first, then username
         user = UserDB.get_by_email(username_to_delete)
+        
+        if not user:
+            user = UserDB.get_by_username(username_to_delete)
         
         if not user:
             return jsonify({"error": "User not found"}), 404
@@ -752,6 +762,79 @@ def get_user_threat_status():
     except Exception as e:
         print(f"Error loading user threat status: {e}")
         return jsonify({"error": "Failed to load user threat status"}), 500
+
+# ---------------- DETECTABILITY ----------------
+
+@app.route("/api/admin/detectability")
+def get_detectability():
+    """Get user detectability data for admin map - admin only"""
+    if not session.get("is_admin"):
+        return jsonify({"error": "Admin authentication required"}), 403
+    
+    try:
+        users_data = UserDB.get_all_users()
+        users_list = []
+        
+        for user_data in users_data:
+            # Skip admin users
+            if user_data.get("is_admin"):
+                continue
+            
+            user_info = {
+                "username": user_data.get("username", user_data.get("email")),
+                "email": user_data.get("email", ""),
+                "status": "OFFLINE",
+                "threat_level": "SAFE",
+                "location": None,
+                "last_seen": user_data.get("last_login", datetime.now().isoformat())
+            }
+            
+            users_list.append(user_info)
+        
+        return jsonify({
+            "status": "success",
+            "users": users_list
+        })
+        
+    except Exception as e:
+        print(f"Error loading detectability data: {e}")
+        return jsonify({"error": "Failed to load detectability data"}), 500
+
+# ---------------- USER DETAILS ----------------
+
+@app.route("/api/admin/user_details/<username>")
+def get_user_details(username):
+    """Get detailed user information - admin only"""
+    if not session.get("is_admin"):
+        return jsonify({"error": "Admin authentication required"}), 403
+    
+    try:
+        # Try to find user by email first, then username
+        user = UserDB.get_by_email(username)
+        if not user:
+            user = UserDB.get_by_username(username)
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Get user's emergency contacts
+        contacts = EmergencyContactsDB.get_by_user(user["id"])
+        
+        return jsonify({
+            "status": "success",
+            "username": user.get("username", user.get("email")),
+            "email": user.get("email", ""),
+            "name": user.get("name", ""),
+            "contact_count": len(contacts),
+            "contacts": contacts,
+            "created_at": user.get("created_at", ""),
+            "last_login": user.get("last_login", ""),
+            "is_admin": user.get("is_admin", False)
+        })
+        
+    except Exception as e:
+        print(f"Error loading user details: {e}")
+        return jsonify({"error": "Failed to load user details"}), 500
 
 # ---------------- THREAT STATUS ----------------
 
