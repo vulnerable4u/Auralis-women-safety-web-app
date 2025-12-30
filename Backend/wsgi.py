@@ -111,7 +111,7 @@ def create_app():
         return response
     
     # Import and register routes
-    from server_backend import app as backend_app
+    from .server_backend import app as backend_app
     
     # Copy routes from backend app
     for rule in backend_app.url_map.iter_rules():
