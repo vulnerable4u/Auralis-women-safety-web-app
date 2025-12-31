@@ -102,7 +102,7 @@ def create_app():
     
     from flask import Flask, g, request
     from dotenv import load_dotenv
-    from server_backend import app as backend_app
+    from Backend.server_backend import app as backend_app
     
     load_dotenv()
     
