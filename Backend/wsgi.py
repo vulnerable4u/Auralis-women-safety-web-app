@@ -149,8 +149,9 @@ def create_app():
     # Copy routes from backend app
     for rule in backend_app.url_map.iter_rules():
         endpoint = rule.endpoint
-        if hasattr(backend_app, endpoint):
-            view_func = getattr(backend_app, endpoint)
+        # Get the view function from the view_functions dictionary
+        if endpoint in backend_app.view_functions:
+            view_func = backend_app.view_functions[endpoint]
             app.add_url_rule(rule.rule, endpoint, view_func, methods=rule.methods)
     
     # Error handlers
