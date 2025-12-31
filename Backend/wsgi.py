@@ -121,12 +121,9 @@ def create_app():
     app.config["DEBUG"] = False
     app.config["TESTING"] = False
     
-    # Health check route for Render
-    @app.route("/")
-    def health_check():
-        return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
-    
+    # Health check routes for Render (must not conflict with backend routes)
     @app.route("/health")
+    @app.route("/healthz")
     def render_health():
         return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
     
