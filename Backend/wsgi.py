@@ -1,21 +1,24 @@
 """
 Production WSGI Entry Point for Render Deployment
-Optimized for Gunicorn with gevent workers for async I/O
+Optimized for Gunicorn with gthread workers for ML/audio workloads
 """
 
 import os
 import sys
+import json
+import logging
+import threading
+from datetime import datetime, timezone
+from uuid import uuid4
 
 # Add project root to path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
 # Ensure we use the virtual environment's site-packages
-# This is critical for Render deployment to avoid externally-managed-environment errors
 VENV_PATH = os.path.join(PROJECT_ROOT, "venv")
 if os.path.exists(VENV_PATH):
     venv_site_packages = os.path.join(VENV_PATH, "lib")
-    # Find the python version directory
     for item in os.listdir(venv_site_packages):
         if item.startswith("python"):
             site_packages = os.path.join(venv_site_packages, item, "site-packages")
@@ -23,38 +26,72 @@ if os.path.exists(VENV_PATH):
                 sys.path.insert(0, site_packages)
                 break
 
-import json
-import logging
-from datetime import datetime, timezone
-from uuid import uuid4
-
 # =========================================================
-# STANDARD LOGGING CONFIGURATION
+# PRODUCTION LOGGING (JSON-like structured format)
 # =========================================================
 
-def setup_logging():
-    """Configure standard Python logging for production"""
+class ProductionLogger:
+    """Production-safe structured logger using stdlib logging"""
     
-    # Create logger
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
+    _initialized = False
+    _lock = threading.Lock()
     
-    # Create console handler
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.INFO)
+    @classmethod
+    def setup(cls):
+        with cls._lock:
+            if cls._initialized:
+                return
+            cls._initialized = True
+            
+            cls.logger = logging.getLogger("auralis")
+            cls.logger.setLevel(logging.INFO)
+            cls.logger.handlers.clear()
+            
+            handler = logging.StreamHandler()
+            handler.setLevel(logging.INFO)
+            
+            formatter = logging.Formatter(
+                '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "name": "%(name)s", "message": "%(message)s"}'
+            )
+            handler.setFormatter(formatter)
+            cls.logger.addHandler(handler)
     
-    # Create formatter with timestamp
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    handler.setFormatter(formatter)
-    
-    # Add handler to logger
-    logger.addHandler(handler)
-    
-    return logger
+    @classmethod
+    def get_logger(cls, name=None):
+        cls.setup()
+        return cls.logger if name is None else cls.logger.getChild(name)
 
-logger = setup_logging()
+logger = ProductionLogger.get_logger("wsgi")
+
+# =========================================================
+# SUPABASE INITIALIZATION (runs once per worker)
+# =========================================================
+
+_supabase_initialized = False
+_supabase_lock = threading.Lock()
+
+def initialize_supabase_once():
+    """Initialize Supabase only once per worker process"""
+    global _supabase_initialized
+    
+    with _supabase_lock:
+        if _supabase_initialized:
+            logger.info("Supabase already initialized for this worker")
+            return True
+        
+        try:
+            from Database.database import init_supabase, check_database_connection, ensure_admin_exists
+            init_supabase()
+            if not check_database_connection():
+                raise RuntimeError("Database connection failed")
+            ensure_admin_exists()
+            _supabase_initialized = True
+            logger.info("Supabase initialized successfully (worker init)")
+            return True
+        except Exception as e:
+            logger.error(f"Supabase initialization failed: {e}")
+            # Don't raise - allow app to start, health check will catch issues
+            return False
 
 # =========================================================
 # FLASK APPLICATION FACTORY
@@ -65,29 +102,33 @@ def create_app():
     
     from flask import Flask, g, request
     from dotenv import load_dotenv
+    from server_backend import app as backend_app
     
-    # Load environment variables
     load_dotenv()
     
-    # Define paths
     FRONTEND_DIR = os.path.join(PROJECT_ROOT, "Frontend")
     
-    # Production Flask configuration
     app = Flask(
         __name__,
         template_folder=os.path.join(FRONTEND_DIR, "templates"),
         static_folder=os.path.join(FRONTEND_DIR, "static")
     )
     
-    # Security settings
     app.secret_key = os.environ.get("SECRET_KEY")
     app.config["SESSION_COOKIE_SECURE"] = True
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    
-    # Disable debug in production
     app.config["DEBUG"] = False
     app.config["TESTING"] = False
+    
+    # Health check route for Render
+    @app.route("/")
+    def health_check():
+        return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+    
+    @app.route("/health")
+    def render_health():
+        return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
     
     # Request ID middleware
     @app.before_request
@@ -97,21 +138,16 @@ def create_app():
     
     @app.after_request
     def after_request(response):
-        # Add request ID to response headers
         response.headers["X-Request-ID"] = g.get("request_id", "N/A")
         
-        # Log request duration
         if hasattr(g, "start_time"):
             duration = (datetime.now(timezone.utc) - g.start_time).total_seconds()
             logger.info(
-                f"Request completed: {request.method} {request.path} - "
-                f"Status: {response.status_code} - Duration: {round(duration * 1000, 2)}ms"
+                f"request_completed method={request.method} path={request.path} "
+                f"status={response.status_code} duration_ms={round(duration * 1000, 2)}"
             )
         
         return response
-    
-    # Import and register routes
-    from .server_backend import app as backend_app
     
     # Copy routes from backend app
     for rule in backend_app.url_map.iter_rules():
@@ -139,16 +175,20 @@ def create_app():
     
     @app.errorhandler(500)
     def internal_error(error):
-        logger.error(f"Internal server error: {error}")
+        logger.error(f"internal_error request_id={g.get('request_id')} error={error}")
         return {"error": "Internal server error", "request_id": g.get("request_id")}, 500
     
-    logger.info("Flask application created successfully")
+    logger.info("flask_app_created production=true")
     
     return app
+
+# Initialize Supabase on module load (per-worker)
+initialize_supabase_once()
 
 # Create application instance
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5001)))
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, threaded=True)
 

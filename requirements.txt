@@ -1,7 +1,6 @@
 # Core Flask & Production Server
 Flask==3.0.0 
 gunicorn==23.0.0
-gevent==24.11.1
 Werkzeug==3.0.1
 
 # Database & Auth
